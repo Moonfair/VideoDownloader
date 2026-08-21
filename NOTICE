@@ -1,0 +1,11 @@
+VideoDownloader
+Copyright 2026 Moonfair contributors
+
+The Bilibili downloader is based on concepts and behavior from
+Henryhaohao/Bilibili_video_download, reviewed at commit
+2e6035d2b2acdc188b713b17f1f9adf9cd5b4067 and licensed under Apache-2.0.
+See agent-skill/integrated-video-downloader/references/BILIBILI_UPSTREAM.md.
+
+The public repository does not include code adapted from the unlicensed
+imfenghuang/WeiboVideoDownloader repository. Weibo support downloads official
+CDN media URLs discovered by trusted browser automation.

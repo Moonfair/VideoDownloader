@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f7">
+  <title>视频下载操作台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">▶</span>
+      <div>
+        <strong>视频下载操作台</strong>
+        <span>微博 · Bilibili</span>
+      </div>
+    </div>
+    <div class="connection-status"><span class="status-dot"></span>Agent Skill 就绪</div>
+  </header>
+
+  <main class="workspace">
+    <section class="input-pane" aria-labelledby="task-heading">
+      <div class="section-heading">
+        <div>
+          <span class="step-index">01</span>
+          <h1 id="task-heading">下载任务</h1>
+        </div>
+        <button class="icon-button" id="resetButton" type="button" title="重置任务" aria-label="重置任务">↺</button>
+      </div>
+
+      <form id="taskForm">
+        <label class="field-label" for="videoInput">视频链接或编号</label>
+        <div class="url-field">
+          <textarea id="videoInput" rows="3" placeholder="https://weibo.com/... 或 BV / AV 号" spellcheck="false"></textarea>
+          <span id="platformBadge" class="platform-badge neutral">待识别</span>
+        </div>
+        <p id="inputError" class="field-error" role="alert"></p>
+
+        <fieldset class="control-group">
+          <legend>执行方式</legend>
+          <div class="segmented-control">
+            <label><input type="radio" name="action" value="resolve" checked><span>仅解析</span></label>
+            <label><input type="radio" name="action" value="download"><span>下载视频</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="control-group" id="pageGroup" disabled>
+          <legend>Bilibili 分 P</legend>
+          <div class="page-controls">
+            <label class="check-row"><input id="allPages" type="checkbox"><span>全部分 P</span></label>
+            <label class="number-field"><span>指定分 P</span><input id="pageNumber" type="number" min="1" step="1" placeholder="默认"></label>
+          </div>
+        </fieldset>
+
+        <label class="field-label" for="outputDir">下载目录</label>
+        <input id="outputDir" type="text" value="videos" spellcheck="false">
+
+        <label class="field-label" for="timeout">网络超时</label>
+        <div class="range-row">
+          <input id="timeout" type="range" min="10" max="120" step="5" value="30">
+          <output id="timeoutValue" for="timeout">30 秒</output>
+        </div>
+      </form>
+
+      <div class="primary-actions">
+        <button class="primary-button" id="copyTaskButton" type="button"><span aria-hidden="true">⧉</span>复制 Agent 任务</button>
+        <button class="secondary-button" id="downloadTaskButton" type="button"><span aria-hidden="true">⇩</span>下载任务文件</button>
+      </div>
+    </section>
+
+    <section class="output-pane" aria-labelledby="handoff-heading">
+      <div class="media-signal" id="mediaSignal">
+        <canvas id="signalCanvas" width="960" height="220" aria-label="任务媒体信号预览"></canvas>
+        <div class="signal-caption">
+          <span id="signalPlatform">等待链接</span>
+          <strong id="signalAction">准备任务</strong>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="任务输出">
+        <button role="tab" aria-selected="true" aria-controls="taskPanel" id="taskTab">Agent 任务</button>
+        <button role="tab" aria-selected="false" aria-controls="commandPanel" id="commandTab">命令</button>
+        <button role="tab" aria-selected="false" aria-controls="resultPanel" id="resultTab">执行结果</button>
+      </div>
+
+      <div class="tab-panel" id="taskPanel" role="tabpanel" aria-labelledby="taskTab">
+        <div class="panel-toolbar"><span>integrated-video-downloader.task.v1</span><button id="copyJsonButton" type="button">复制 JSON</button></div>
+        <pre id="taskJson"></pre>
+      </div>
+
+      <div class="tab-panel" id="commandPanel" role="tabpanel" aria-labelledby="commandTab" hidden>
+        <div class="command-switch">
+          <button class="active" data-shell="windows" type="button">Windows</button>
+          <button data-shell="posix" type="button">macOS / Linux</button>
+        </div>
+        <pre id="commandText"></pre>
+        <button class="inline-action" id="copyCommandButton" type="button">复制命令</button>
+      </div>
+
+      <div class="tab-panel result-panel" id="resultPanel" role="tabpanel" aria-labelledby="resultTab" hidden>
+        <label class="field-label" for="resultInput">粘贴 Agent 返回的 JSON</label>
+        <textarea id="resultInput" rows="7" placeholder='{"ok": true, "downloads": [...]}' spellcheck="false"></textarea>
+        <div id="resultSummary" class="result-summary empty">尚无执行结果</div>
+      </div>
+
+      <footer class="task-footer">
+        <span id="validationState">填写链接后生成任务</span>
+        <span>任务仅使用公开内容</span>
+      </footer>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
