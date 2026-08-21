@@ -16,8 +16,13 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from weibo_browser_resolver import BrowserResolutionError, resolve_weibo_media
+
+
 WEB_DIR = SCRIPT_DIR.parent / "web"
 MAX_REQUEST_BYTES = 64 * 1024
 PAGES_ORIGIN = "https://moonfair.github.io"
@@ -34,7 +39,13 @@ def allowed_origin(value: str | None) -> str | None:
     return None
 
 
-def build_arguments(task: dict[str, object], output_dir: Path, *, resolve_only: bool) -> tuple[str, list[str]]:
+def build_arguments(
+    task: dict[str, object],
+    output_dir: Path,
+    *,
+    resolve_only: bool,
+    weibo_media_urls: list[str] | None = None,
+) -> tuple[str, list[str]]:
     value = task.get("input")
     if not isinstance(value, str) or not value.strip():
         raise ValueError("缺少视频链接或编号")
@@ -50,9 +61,15 @@ def build_arguments(task: dict[str, object], output_dir: Path, *, resolve_only: 
 
     if platform == "weibo":
         host = (urlparse(value).hostname or "").lower()
-        if not (host.endswith(".weibocdn.com") or host.endswith(".sinaimg.cn")):
-            raise ValueError("微博分享页需要先由 Agent 浏览器取得 video.currentSrc；也可直接粘贴微博官方 CDN 地址")
-        arguments = ["--media-url", value]
+        if host.endswith(".weibocdn.com") or host.endswith(".sinaimg.cn"):
+            media_urls = [value]
+        elif weibo_media_urls:
+            media_urls = weibo_media_urls
+        else:
+            raise ValueError("微博分享页需要由本地下载服务的浏览器解析器处理")
+        arguments = []
+        for media_url in media_urls:
+            arguments.extend(("--media-url", media_url))
     else:
         arguments = [value]
         page = task.get("page")
@@ -152,7 +169,22 @@ class Handler(SimpleHTTPRequestHandler):
             timeout = float(task.get("timeout", 30))
             with tempfile.TemporaryDirectory(prefix="video-downloader-") as temp:
                 directory = Path(temp)
-                platform, arguments = build_arguments(task, directory, resolve_only=self.path.endswith("resolve"))
+                weibo_media_urls = None
+                input_value = task.get("input")
+                platform_hint = task.get("platform", "auto")
+                if isinstance(input_value, str):
+                    host = (urlparse(input_value).hostname or "").lower()
+                    is_weibo_page = (
+                        platform_hint == "weibo" or "weibo" in host
+                    ) and not (host.endswith(".weibocdn.com") or host.endswith(".sinaimg.cn"))
+                    if is_weibo_page:
+                        weibo_media_urls = resolve_weibo_media(input_value, timeout)
+                platform, arguments = build_arguments(
+                    task,
+                    directory,
+                    resolve_only=self.path.endswith("resolve"),
+                    weibo_media_urls=weibo_media_urls,
+                )
                 payload = run_downloader(platform, arguments, timeout)
                 if self.path.endswith("resolve"):
                     self._json(payload)
@@ -173,7 +205,7 @@ class Handler(SimpleHTTPRequestHandler):
                 with target.open("rb") as source:
                     while chunk := source.read(1024 * 1024):
                         self.wfile.write(chunk)
-        except (ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+        except (ValueError, BrowserResolutionError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             self._json({"ok": False, "error": str(exc)}, HTTPStatus.BAD_REQUEST)
         except (BrokenPipeError, ConnectionResetError):
             return

@@ -32,15 +32,17 @@ class PlatformDetectionTests(unittest.TestCase):
 
 
 class DispatcherTests(unittest.TestCase):
+    @patch.object(MODULE, "resolve_weibo_media", return_value=["https://f.video.weibocdn.com/video.mp4"])
     @patch.object(MODULE.subprocess, "run")
-    def test_forwards_arguments_and_exit_code(self, run):
+    def test_resolves_weibo_page_before_forwarding(self, run, resolve):
         run.return_value.returncode = 7
         result = MODULE.main(["--platform", "weibo", "https://weibo.com/example", "--resolve-only"])
         command = run.call_args.args[0]
         self.assertEqual(result, 7)
+        resolve.assert_called_once_with("https://weibo.com/example", 30.0)
         self.assertEqual(command[:2], [sys.executable, "-S"])
         self.assertTrue(command[2].endswith("weibo_media_downloader.py"))
-        self.assertEqual(command[3:], ["https://weibo.com/example", "--resolve-only"])
+        self.assertEqual(command[3:], ["--resolve-only", "--media-url", "https://f.video.weibocdn.com/video.mp4"])
 
 
 class TaskFileTests(unittest.TestCase):

@@ -12,6 +12,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from weibo_browser_resolver import BrowserResolutionError, resolve_weibo_media
+
+
 BILIBILI_HOSTS = {"bilibili.com", "www.bilibili.com", "m.bilibili.com", "b23.tv"}
 WEIBO_HOSTS = {"weibo.com", "www.weibo.com", "m.weibo.cn", "weibo.cn", "www.weibo.cn"}
 TASK_SCHEMA = "integrated-video-downloader.task.v1"
@@ -45,6 +52,35 @@ def build_command(platform: str, arguments: list[str]) -> list[str]:
     script_name = "weibo_media_downloader.py" if platform == "weibo" else "bilibili_video_downloader.py"
     script = Path(__file__).with_name(script_name)
     return [sys.executable, "-S", str(script), *arguments]
+
+
+def resolve_weibo_arguments(arguments: list[str]) -> list[str]:
+    """Replace a public Weibo page with validated media URLs from isolated Chromium."""
+    if "--media-url" in arguments:
+        return arguments
+    page_index = next(
+        (
+            index
+            for index, value in enumerate(arguments)
+            if _host(value) in WEIBO_HOSTS
+            or _host(value).endswith(".weibo.com")
+            or _host(value).endswith(".weibo.cn")
+        ),
+        None,
+    )
+    if page_index is None:
+        return arguments
+    timeout = 30.0
+    for index, value in enumerate(arguments):
+        if value == "--timeout" and index + 1 < len(arguments):
+            timeout = float(arguments[index + 1])
+        elif value.startswith("--timeout="):
+            timeout = float(value.partition("=")[2])
+    media_urls = resolve_weibo_media(arguments[page_index], timeout)
+    resolved = [value for index, value in enumerate(arguments) if index != page_index]
+    for media_url in media_urls:
+        resolved.extend(("--media-url", media_url))
+    return resolved
 
 
 def load_task(path: Path) -> tuple[str, list[str]]:
@@ -126,11 +162,23 @@ def main(argv: list[str] | None = None) -> int:
             platform, remaining = load_task(options.task_file)
         except ValueError as exc:
             parser.error(str(exc))
+        if platform == "weibo":
+            try:
+                remaining = resolve_weibo_arguments(remaining)
+            except (BrowserResolutionError, ValueError) as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+                return 1
         return subprocess.run(build_command(platform, remaining), check=False).returncode
     try:
         platform = options.platform if options.platform != "auto" else detect_platform(remaining)
     except ValueError as exc:
         parser.error(str(exc))
+    if platform == "weibo":
+        try:
+            remaining = resolve_weibo_arguments(remaining)
+        except (BrowserResolutionError, ValueError) as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
     return subprocess.run(build_command(platform, remaining), check=False).returncode
 
 

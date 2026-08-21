@@ -43,7 +43,7 @@ Install by copying or linking `agent-skill/integrated-video-downloader` into a s
 
 ## Weibo boundary
 
-The upstream `imfenghuang/WeiboVideoDownloader` repository has no declared license, so its adapted implementation is not redistributed here. The public skill instead asks a trusted Agent browser to read the public page's `video.currentSrc`, then downloads only validated official Weibo CDN URLs. A validated CDN URL can be pasted into the web app for direct browser download. The service never reads or transmits browser cookies or login state.
+The upstream `imfenghuang/WeiboVideoDownloader` repository has no declared license, so its adapted implementation is not redistributed here. The public skill instead launches an isolated, temporary Edge/Chrome/Chromium profile, reads the public page's `video.currentSrc`, then downloads only validated official Weibo CDN URLs. Users can paste the Weibo share link directly into the web app. The service never opens the user's normal browser profile or reads/transmits browser cookies and login state.
 
 ## GitHub Pages
 

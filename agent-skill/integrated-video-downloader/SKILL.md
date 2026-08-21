@@ -12,6 +12,7 @@ Use this skill when the user asks to resolve or download public Weibo or Bilibil
 - `scripts/video_downloader.py`: unified dispatcher and static-workbench task loader.
 - `scripts/bilibili_video_downloader.py`: public Bilibili links, BV/AV IDs, short links, and multi-page videos.
 - `scripts/weibo_media_downloader.py`: verified Weibo CDN media URLs obtained by trusted browser automation.
+- `scripts/weibo_browser_resolver.py`: isolated Edge/Chrome/Chromium resolver for public Weibo pages.
 - `scripts/server.py`: local same-origin service that lets the static workbench return browser downloads.
 - `tests/`: offline unit tests.
 
@@ -49,9 +50,15 @@ Inspect `available_pages`, `pages[].quality_name`, and `streams[].bytes`. Ask be
 
 ## Weibo
 
-Direct HTTP page parsing is intentionally not bundled. Navigate to the public Weibo URL using the host's trusted browser automation, wait for JavaScript, and read only unique non-empty `video.currentSrc` values. Do not inspect cookies, local storage, authorization headers, or other login state.
+Give the original public Weibo share URL directly to the unified dispatcher or local web service. Do not ask the user to inspect the page, paste Agent JSON, or find a CDN URL:
 
-Pass each resulting official CDN URL to:
+```shell
+python3 -S "{baseDir}/scripts/video_downloader.py" "<Weibo share URL>" --output-dir "<directory>"
+```
+
+The dispatcher automatically starts an isolated, temporary Edge/Chrome/Chromium profile, waits for the public page JavaScript, reads unique non-empty `video.currentSrc` values, validates the official CDN hosts, and downloads the media. It does not use the user's normal browser profile or inspect cookies, local storage, authorization headers, or other login state.
+
+`--media-url` remains an internal/advanced entry point for an already resolved official CDN URL:
 
 ```shell
 python3 -S "{baseDir}/scripts/video_downloader.py" --platform weibo --media-url "<CDN URL>" --output-dir "<directory>"
