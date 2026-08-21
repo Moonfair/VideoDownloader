@@ -1,64 +1,41 @@
-# VideoDownloader
+# 整合视频下载助手
 
-A static task workbench plus a self-contained Agent Skill for public Weibo and Bilibili videos.
+一个自包含的 Agent Skill，用于解析和下载用户有权保存的公开微博与 Bilibili 视频。仓库不包含 Web 页面或常驻服务，运行时仅依赖 Python 标准库；微博公开页自动使用临时隔离的 Edge、Chrome 或 Chromium 执行页面 JavaScript。
 
-## Web app
+## Skill 目录
 
-Open `web/index.html`, or use the GitHub Pages deployment. The static app detects supported links, configures resolve/download and Bilibili page options, exports `integrated-video-downloader.task.v1` JSON, generates portable commands, and renders Agent JSON results.
+完整可分发目录位于 `agent-skill/integrated-video-downloader/`。
 
-For direct browser downloads, clone the repository and start the standard-library local bridge:
-
-```powershell
-py -3 -S "agent-skill\integrated-video-downloader\scripts\server.py"
-```
-
-The service opens `http://127.0.0.1:8765/`. The published GitHub Pages app also detects this loopback service and enables the same direct-download button. No package installation is required.
-
-GitHub Pages cannot resolve platform links by JavaScript alone because both platform APIs reject cross-origin browser requests. The local bridge keeps the interface in JavaScript while performing metadata requests and file streaming outside the browser CORS boundary.
-
-## Agent Skill
-
-The complete distributable skill is at `agent-skill/integrated-video-downloader/`. It uses only the Python standard library.
-
-Run an exported task:
-
-```powershell
-py -3 -S "agent-skill\integrated-video-downloader\scripts\video_downloader.py" --task-file "<task.json>"
-```
-
-Resolve a Bilibili video:
-
-```powershell
-py -3 -S "agent-skill\integrated-video-downloader\scripts\video_downloader.py" "BV1xx411c7mD" --resolve-only
-```
-
-Install by copying or linking `agent-skill/integrated-video-downloader` into a supported personal skill root:
-
-| Harness | Skill root |
+| Harness | 安装目录 |
 | --- | --- |
 | Claude | `~/.claude/skills/` |
 | Codex | `~/.codex/skills/` |
 | DeepSeek Harness | `~/.agents/skills/` |
-| OpenClaw | `~/.agents/skills/` or `~/.openclaw/skills/` |
+| OpenClaw | `~/.agents/skills/` 或 `~/.openclaw/skills/` |
 
-## Weibo boundary
+## 直接调用
 
-The upstream `imfenghuang/WeiboVideoDownloader` repository has no declared license, so its adapted implementation is not redistributed here. The public skill instead launches an isolated, temporary Edge/Chrome/Chromium profile, reads the public page's `video.currentSrc`, then downloads only validated official Weibo CDN URLs. Users can paste the Weibo share link directly into the web app. The service never opens the user's normal browser profile or reads/transmits browser cookies and login state.
+先解析视频信息：
 
-## GitHub Pages
+```powershell
+py -3 -S "agent-skill\integrated-video-downloader\scripts\video_downloader.py" "<微博或 Bilibili 链接、BV、AV>" --resolve-only
+```
 
-`.github/workflows/pages.yml` runs JavaScript syntax checks and all offline Python tests before uploading only `web/` as the Pages artifact. In repository settings, the Pages source must be **GitHub Actions**. The expected project URL is:
+下载到指定目录：
 
-`https://moonfair.github.io/VideoDownloader/`
+```powershell
+py -3 -S "agent-skill\integrated-video-downloader\scripts\video_downloader.py" "<微博或 Bilibili 链接、BV、AV>" --output-dir "<下载目录>"
+```
 
-## Development
+Bilibili 多分 P 使用 `--page N` 或 `--all-pages`。微博解析不会读取用户日常浏览器的 Cookie、LocalStorage 或登录态，也不会绕过登录、付费、地区限制、验证码或平台访问控制。
+
+## 测试
 
 ```powershell
 $env:PYTHONDONTWRITEBYTECODE = "1"
-py -3.14 -S -m unittest discover -s agent-skill/integrated-video-downloader/tests -p "test_*.py" -v
-node --check web/app.js
+py -3 -S -m unittest discover -s agent-skill/integrated-video-downloader/tests -p "test_*.py" -v
 ```
 
 ## License
 
-Apache License 2.0. See `LICENSE` and `NOTICE`.
+Apache License 2.0。见 `LICENSE` 与 `NOTICE`。

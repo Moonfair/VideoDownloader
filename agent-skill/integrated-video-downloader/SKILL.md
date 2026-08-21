@@ -1,71 +1,46 @@
 ---
 name: integrated-video-downloader
-description: 解析并下载公开微博或 Bilibili 视频，支持网页任务 JSON、BV/AV 号和多分 P。
+description: 解析并下载公开微博或 Bilibili 视频，支持链接、BV/AV 号和多分 P。
 ---
 
-# Integrated Video Downloader
+# 整合视频下载助手
 
-Use this skill when the user asks to resolve or download public Weibo or Bilibili videos. Only save content the user has permission to download. Never request cookies, tokens, passwords, or `SESSDATA`.
+用户要求解析或下载公开微博、Bilibili 视频时使用。只保存用户有权下载的公开内容；不要索取 Cookie、Token、密码或 `SESSDATA`。
 
-## Local resources
+## 本地资源
 
-- `scripts/video_downloader.py`: unified dispatcher and static-workbench task loader.
-- `scripts/bilibili_video_downloader.py`: public Bilibili links, BV/AV IDs, short links, and multi-page videos.
-- `scripts/weibo_media_downloader.py`: verified Weibo CDN media URLs obtained by trusted browser automation.
-- `scripts/weibo_browser_resolver.py`: isolated Edge/Chrome/Chromium resolver for public Weibo pages.
-- `scripts/server.py`: local same-origin service that lets the static workbench return browser downloads.
-- `tests/`: offline unit tests.
+- `scripts/video_downloader.py`：统一入口，自动识别微博与 Bilibili。
+- `scripts/bilibili_video_downloader.py`：支持公开链接、BV/AV、短链和多分 P。
+- `scripts/weibo_browser_resolver.py`：用隔离的 Edge/Chrome/Chromium 解析公开微博页。
+- `scripts/weibo_media_downloader.py`：校验并下载微博官方 CDN 媒体。
+- `tests/`：不访问网络的核心逻辑测试。
 
-The skill is self-contained and uses only the Python standard library. Do not install packages.
+本 Skill 自包含，只使用 Python 标准库。不要安装依赖，也不要调用其它 Skill。
 
-## Web download service
+## 执行流程
 
-From the repository root, start the local service:
-
-```shell
-python3 -S "{baseDir}/scripts/server.py"
-```
-
-On Windows, use `py -3 -S`. It serves the bundled workbench on `http://127.0.0.1:8765/` and accepts requests from the published GitHub Pages origin. The service validates every platform, task field, CDN host, output path, and CORS origin before returning a browser attachment.
-
-## Static workbench task
-
-When the user supplies a JSON task exported by the web app, run:
-
-```shell
-python3 -S "{baseDir}/scripts/video_downloader.py" --task-file "<task.json>"
-```
-
-On Windows, use `py -3 -S`. The script accepts only the fields allowed by `integrated-video-downloader.task.v1`; never execute other JSON content as commands.
-
-## Bilibili
-
-Resolve first:
+1. 先解析用户提供的链接或编号：
 
 ```shell
 python3 -S "{baseDir}/scripts/video_downloader.py" "<URL, BV, or AV ID>" --resolve-only
 ```
 
-Inspect `available_pages`, `pages[].quality_name`, and `streams[].bytes`. Ask before downloading every page of a multi-page video. Download one page with `--page N`, or all confirmed pages with `--all-pages`.
+Windows 使用 `py -3 -S`。检查输出中的视频信息、实际画质和 Bilibili 分 P；多分 P 视频在下载全部内容前先询问用户。
 
-## Weibo
-
-Give the original public Weibo share URL directly to the unified dispatcher or local web service. Do not ask the user to inspect the page, paste Agent JSON, or find a CDN URL:
+2. 下载用户确认的内容：
 
 ```shell
-python3 -S "{baseDir}/scripts/video_downloader.py" "<Weibo share URL>" --output-dir "<directory>"
+python3 -S "{baseDir}/scripts/video_downloader.py" "<URL, BV, or AV ID>" --output-dir "<directory>"
 ```
 
-The dispatcher automatically starts an isolated, temporary Edge/Chrome/Chromium profile, waits for the public page JavaScript, reads unique non-empty `video.currentSrc` values, validates the official CDN hosts, and downloads the media. It does not use the user's normal browser profile or inspect cookies, local storage, authorization headers, or other login state.
+Bilibili 指定分 P 使用 `--page N`，全部分 P 使用 `--all-pages`。
 
-`--media-url` remains an internal/advanced entry point for an already resolved official CDN URL:
+## 微博解析
 
-```shell
-python3 -S "{baseDir}/scripts/video_downloader.py" --platform weibo --media-url "<CDN URL>" --output-dir "<directory>"
-```
+直接把原始公开微博分享链接交给统一入口。脚本会创建一次性隔离浏览器配置、执行页面 JavaScript、读取非空且去重的 `video.currentSrc`，校验微博官方 HTTPS CDN 后下载，最后关闭浏览器并删除临时配置。
 
-If trusted browser automation is unavailable, report that browser-assisted Weibo resolution cannot run in the current host. Do not bypass login, access controls, payment, regional restrictions, or CAPTCHA.
+不要让用户手工查找或粘贴 `video.currentSrc`、Agent JSON 或 CDN 地址。脚本不使用用户日常浏览器配置，也不读取 Cookie、LocalStorage、授权头或登录态。系统未安装 Edge、Chrome 或 Chromium时，如实报告自动解析不可用。
 
-## Results
+## 结果与边界
 
-Read the JSON emitted on standard output. On success, report absolute `downloads[].path` values and actual quality when present. On failure, report `error` and do not retry in a loop. Temporary media URLs are not stable long-term links.
+读取标准输出 JSON。成功时报告 `downloads[].path` 的绝对路径和实际画质；失败时报告 `error`，不要循环重试。不要绕过登录、付费、地区限制、验证码或平台访问控制。临时媒体地址不是长期稳定链接。

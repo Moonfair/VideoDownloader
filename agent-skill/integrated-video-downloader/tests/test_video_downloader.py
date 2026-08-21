@@ -1,7 +1,5 @@
 import importlib.util
-import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -43,46 +41,6 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(command[:2], [sys.executable, "-S"])
         self.assertTrue(command[2].endswith("weibo_media_downloader.py"))
         self.assertEqual(command[3:], ["--resolve-only", "--media-url", "https://f.video.weibocdn.com/video.mp4"])
-
-
-class TaskFileTests(unittest.TestCase):
-    def write_task(self, task):
-        directory = tempfile.TemporaryDirectory()
-        path = Path(directory.name) / "task.json"
-        path.write_text(json.dumps(task), encoding="utf-8")
-        return directory, path
-
-    def test_builds_bilibili_download_arguments(self):
-        directory, path = self.write_task({
-            "schema": MODULE.TASK_SCHEMA,
-            "input": "BV1xx411c7mD",
-            "platform": "bilibili",
-            "action": "download",
-            "outputDir": "videos",
-            "timeout": 45,
-            "page": 2,
-        })
-        self.addCleanup(directory.cleanup)
-        platform, arguments = MODULE.load_task(path)
-        self.assertEqual(platform, "bilibili")
-        self.assertEqual(arguments, ["BV1xx411c7mD", "--output-dir", "videos", "--timeout", "45", "--page", "2"])
-
-    def test_rejects_unknown_schema(self):
-        directory, path = self.write_task({"schema": "unknown", "input": "BV1xx411c7mD"})
-        self.addCleanup(directory.cleanup)
-        with self.assertRaisesRegex(ValueError, "schema"):
-            MODULE.load_task(path)
-
-    def test_rejects_platform_specific_arguments(self):
-        directory, path = self.write_task({
-            "schema": MODULE.TASK_SCHEMA,
-            "input": "https://weibo.com/example",
-            "platform": "weibo",
-            "page": 2,
-        })
-        self.addCleanup(directory.cleanup)
-        with self.assertRaisesRegex(ValueError, "仅适用于 Bilibili"):
-            MODULE.load_task(path)
 
 
 if __name__ == "__main__":
