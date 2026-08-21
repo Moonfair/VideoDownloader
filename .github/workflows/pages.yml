@@ -26,6 +26,11 @@ jobs:
           python-version: "3.14"
       - name: Check web JavaScript
         run: node --check web/app.js
+      - name: Check bundled skill web copy
+        run: |
+          cmp web/index.html agent-skill/integrated-video-downloader/web/index.html
+          cmp web/styles.css agent-skill/integrated-video-downloader/web/styles.css
+          cmp web/app.js agent-skill/integrated-video-downloader/web/app.js
       - name: Run offline skill tests
         env:
           PYTHONDONTWRITEBYTECODE: "1"

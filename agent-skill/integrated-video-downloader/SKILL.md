@@ -12,9 +12,20 @@ Use this skill when the user asks to resolve or download public Weibo or Bilibil
 - `scripts/video_downloader.py`: unified dispatcher and static-workbench task loader.
 - `scripts/bilibili_video_downloader.py`: public Bilibili links, BV/AV IDs, short links, and multi-page videos.
 - `scripts/weibo_media_downloader.py`: verified Weibo CDN media URLs obtained by trusted browser automation.
+- `scripts/server.py`: local same-origin service that lets the static workbench return browser downloads.
 - `tests/`: offline unit tests.
 
 The skill is self-contained and uses only the Python standard library. Do not install packages.
+
+## Web download service
+
+From the repository root, start the local service:
+
+```shell
+python3 -S "{baseDir}/scripts/server.py"
+```
+
+On Windows, use `py -3 -S`. It serves the bundled workbench on `http://127.0.0.1:8765/` and accepts requests from the published GitHub Pages origin. The service validates every platform, task field, CDN host, output path, and CORS origin before returning a browser attachment.
 
 ## Static workbench task
 

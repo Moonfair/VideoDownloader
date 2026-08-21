@@ -6,7 +6,15 @@ A static task workbench plus a self-contained Agent Skill for public Weibo and B
 
 Open `web/index.html`, or use the GitHub Pages deployment. The static app detects supported links, configures resolve/download and Bilibili page options, exports `integrated-video-downloader.task.v1` JSON, generates portable commands, and renders Agent JSON results.
 
-The browser app does not pretend to bypass cross-origin or visitor-page restrictions. Media resolution and file writes belong to the Agent Skill.
+For direct browser downloads, clone the repository and start the standard-library local bridge:
+
+```powershell
+py -3 -S "agent-skill\integrated-video-downloader\scripts\server.py"
+```
+
+The service opens `http://127.0.0.1:8765/`. The published GitHub Pages app also detects this loopback service and enables the same direct-download button. No package installation is required.
+
+GitHub Pages cannot resolve platform links by JavaScript alone because both platform APIs reject cross-origin browser requests. The local bridge keeps the interface in JavaScript while performing metadata requests and file streaming outside the browser CORS boundary.
 
 ## Agent Skill
 
@@ -35,7 +43,7 @@ Install by copying or linking `agent-skill/integrated-video-downloader` into a s
 
 ## Weibo boundary
 
-The upstream `imfenghuang/WeiboVideoDownloader` repository has no declared license, so its adapted implementation is not redistributed here. The public skill instead asks a trusted Agent browser to read the public page's `video.currentSrc`, then downloads only validated official Weibo CDN URLs. It never reads or transmits browser cookies or login state.
+The upstream `imfenghuang/WeiboVideoDownloader` repository has no declared license, so its adapted implementation is not redistributed here. The public skill instead asks a trusted Agent browser to read the public page's `video.currentSrc`, then downloads only validated official Weibo CDN URLs. A validated CDN URL can be pasted into the web app for direct browser download. The service never reads or transmits browser cookies or login state.
 
 ## GitHub Pages
 
